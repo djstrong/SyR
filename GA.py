@@ -1,4 +1,6 @@
 from SyR import * 
+from random import random, randint, choice
+import copy
 
 class Problem:
   def __init__(self, data, arguments):
@@ -16,8 +18,8 @@ class Problem:
 
 
 class GA(object):
-    step_count = 1
-    
+    step_count = 100
+    size = 10
     
     def __init__(self):
         data = [[2.0,3.0,6.0], [3.0,4.0,12.0]]
@@ -26,24 +28,62 @@ class GA(object):
         self.problem = Problem(data, arguments)
         self.steps = [self.select,self.reproduce,self.mutate]
         
+    def calculateErrors(self, population):
+	newPopulation = []
+        for exp in population:
+	    try:
+		exp.error = self.problem.error1(exp)
+	    except:
+		continue
+	    newPopulation.append(exp)
+	return newPopulation
+	    
     def select(self, population):
-        return population
+	population = self.calculateErrors(population)
+	return sorted(population, key=lambda exp: exp.error)[:len(population)/2]
     
     def reproduce(self, population):
-        return population
+	newPopulation = []
+	for exp in population:
+	    newPopulation.append(exp)
+	    
+	    exp2 = choice(population)
+	    expNew = copy.deepcopy(exp)
+	    nodes2 = getNodeList(exp2)
+	    nodes1 = getNodeListWithoutLeafs(expNew)
+	    if not nodes2 or not nodes1:
+		newPopulation.append(generateExpression())
+		continue # zmneijsza sie ilosc, moze losowych dolozyc?
+	    node2 = choice(nodes2)
+	    node1 = choice(nodes1)
+	    node1.children[randint(0,len(node1.children)-1)] = copy.deepcopy(node2)
+	    newPopulation.append(expNew)
+	    
+        return newPopulation
     
     def mutate(self,population):
+	for exp in population:
+	    if random()<0.1:
+		pass
+		#mutacja
         return population
     
     def generate_population(self):
-        return [generateExpression() for i in range(10)]
+        return [generateExpression() for i in range(self.size)]
         
     def evolve(self):
         population = self.generate_population()
+        
         for i in range(self.step_count):
             for step in self.steps:
                 population = step(population)
-            print [self.problem.error1(exp) for exp in population]
+	    
+	    population = self.calculateErrors(population)
+            print [exp.error for exp in population]
+            
+        population = self.calculateErrors(population)
+        for exp in sorted(population, key=lambda exp: exp.error):
+	    print exp.error, exp
         
     
 

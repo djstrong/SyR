@@ -121,6 +121,23 @@ def generateExpression():
   else:
     return Constant(random())
 
+def getNodeList(exp):
+  nodes=[]
+  if hasattr(exp, 'children'):
+    for child in exp.children:
+      nodes.append(child)
+      nodes.extend(getNodeList(child))
+  return nodes
+    
+def getNodeListWithoutLeafs(exp):
+  nodes=[]
+  if hasattr(exp, 'children'):
+    for child in exp.children:
+      if hasattr(child, 'children'):
+	nodes.append(child)
+      nodes.extend(getNodeListWithoutLeafs(child))
+  return nodes
+    
 if __name__=="__main__":
     exp = generateExpression()
     print exp
