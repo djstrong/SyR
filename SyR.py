@@ -121,9 +121,10 @@ def generateExpression():
   else:
     return Constant(random())
 
-exp = generateExpression()
-print exp
-print '=', exp.evaluate({'a':1.2,'b':1})
+if __name__=="__main__":
+    exp = generateExpression()
+    print exp
+    print '=', exp.evaluate({'a':1.2,'b':1})
 
 #exp=OpMultiply(OpPlus(Constant(1.0),Constant(2.0)),Argument('b'))
 #print exp.evaluate({'b':1})
