@@ -22,11 +22,11 @@ class GA(object):
     size = 100
     
     def __init__(self):
-        data = [[2.0,3.0,6.0], [3.0,4.0,12.0], [0.2, 5.0, 1.0]]
+        data = [[2.0,3.0,7.0], [3.0,4.0,13.0], [0.2, 5.0, 2.0]]
         self.arguments = ['a','b']
         
         self.problem = Problem(data, self.arguments)
-        self.steps = [self.select,self.reproduce,self.mutate]
+        self.steps = [self.makeUnique, self.select,self.reproduce,self.mutate]
         
     def calculateErrors(self, population):
 	newPopulation = []
@@ -37,7 +37,14 @@ class GA(object):
 		continue
 	    newPopulation.append(exp)
 	return newPopulation
-	    
+	
+    def makeUnique(self, population):
+	newPopulation = []
+	for exp in population:
+	    if exp not in newPopulation:
+		newPopulation.append(exp)
+	return newPopulation
+	
     def select(self, population):
 	population = self.calculateErrors(population)
 	return sorted(population, key=lambda exp: exp.error)[:len(population)/2]
@@ -63,7 +70,7 @@ class GA(object):
     
     def mutate(self,population):
 	for exp in population:
-	    if random()<0.5:
+	    if random()<1.0:
 		if isinstance(exp, Constant):
 		    exp.value *= uniform(-2.0, 2.0)
 		elif isinstance(exp, Argument):
@@ -87,9 +94,12 @@ class GA(object):
 	    population = self.calculateErrors(population)
             #print [exp.error for exp in population]
             
+        population = self.makeUnique(population)
         population = self.calculateErrors(population)
         for exp in sorted(population, key=lambda exp: exp.error):
 	    print exp.error, exp
+	    
+	print population[0]==population[1]
         
     
 

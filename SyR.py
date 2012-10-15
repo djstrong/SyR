@@ -31,7 +31,15 @@ class Operation(Node):
 
   def __repr__(self):
     return '('+self.left().printf()+self.operation+self.right().printf()+')'
-      
+
+  def __eq__(self,other):	
+    if isinstance(other,self.__class__) and hasattr(self, 'children')==hasattr(other, 'children') and len(self.children)==len(other.children):	
+      for nr, child in enumerate(self.children):
+	if child!=other.children[nr]:
+	  return False  
+      return True
+    return False
+    
 # moze zamiast osobnych klas operacji zrobic jakiegos switcha w operation?
 class OpPlus(Operation):
   operation='+'
@@ -85,7 +93,11 @@ class Argument(Node): #variable?
   def __repr__(self):
     return self.argument
   
-  
+  def __eq__(self,other):	
+    if isinstance(other,self.__class__) and self.argument==other.argument:
+      return True
+    return False
+    
 class Constant(Node): #Number?
   
   def __init__(self, value):
@@ -100,6 +112,11 @@ class Constant(Node): #Number?
 
   def __repr__(self):
     return str(self.value)
+
+  def __eq__(self,other):	
+    if isinstance(other,self.__class__) and self.value==other.value:
+      return True
+    return False
     
 def generateExpression():
   ops1arg = [OpSinus]
@@ -142,7 +159,6 @@ if __name__=="__main__":
     exp = generateExpression()
     print exp
     print '=', exp.evaluate({'a':1.2,'b':1})
-
 #exp=OpMultiply(OpPlus(Constant(1.0),Constant(2.0)),Argument('b'))
 #print exp.evaluate({'b':1})
 #print OpPlus(Constant(1.0),Argument('b')).evaluate({'b':1})
