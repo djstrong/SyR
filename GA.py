@@ -38,11 +38,18 @@ class GA(object):
 	    newPopulation.append(exp)
 	return newPopulation
 	
+    def addUniques(self, population):
+	while (len(population)<self.size):
+	    exp = generateExpression()
+	    if exp not in population:
+		population.append(exp)
+	
     def makeUnique(self, population):
 	newPopulation = []
 	for exp in population:
 	    if exp not in newPopulation:
 		newPopulation.append(exp)
+	self.addUniques(newPopulation)
 	return newPopulation
 	
     def select(self, population):
@@ -72,7 +79,7 @@ class GA(object):
 	for exp in population:
 	    if random()<1.0:
 		if isinstance(exp, Constant):
-		    exp.value *= uniform(-2.0, 2.0)
+		    exp.value += uniform(-2.0, 2.0)
 		elif isinstance(exp, Argument):
 		    exp.argument = choice(self.arguments)
 		else:
@@ -96,10 +103,12 @@ class GA(object):
             
         population = self.makeUnique(population)
         population = self.calculateErrors(population)
-        for exp in sorted(population, key=lambda exp: exp.error):
+        population = sorted(population, key=lambda exp: exp.error)
+        for exp in population:
 	    print exp.error, exp
 	    
-	print population[0]==population[1]
+	#print population[0]==population[1]
+	#print population[0].printf()==population[1].printf()
         
     
 

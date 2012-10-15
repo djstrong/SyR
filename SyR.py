@@ -33,11 +33,12 @@ class Operation(Node):
     return '('+self.left().printf()+self.operation+self.right().printf()+')'
 
   def __eq__(self,other):	
-    if isinstance(other,self.__class__) and hasattr(self, 'children')==hasattr(other, 'children') and len(self.children)==len(other.children):	
-      for nr, child in enumerate(self.children):
-	if child!=other.children[nr]:
-	  return False  
-      return True
+    if isinstance(other,self.__class__):
+      if hasattr(self, 'children')==hasattr(other, 'children') and len(self.children)==len(other.children):	
+	for nr, child in enumerate(self.children):
+	  if not (child==other.children[nr]):
+	    return False  
+	return True
     return False
     
 # moze zamiast osobnych klas operacji zrobic jakiegos switcha w operation?
@@ -94,8 +95,9 @@ class Argument(Node): #variable?
     return self.argument
   
   def __eq__(self,other):	
-    if isinstance(other,self.__class__) and self.argument==other.argument:
-      return True
+    if isinstance(other,self.__class__):
+      if self.argument==other.argument:
+	return True
     return False
     
 class Constant(Node): #Number?
@@ -114,8 +116,10 @@ class Constant(Node): #Number?
     return str(self.value)
 
   def __eq__(self,other):	
-    if isinstance(other,self.__class__) and self.value==other.value:
-      return True
+    if isinstance(other,self.__class__):
+      if self.value==other.value:
+	return True
+    
     return False
     
 def generateExpression():
