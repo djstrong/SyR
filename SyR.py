@@ -1,7 +1,7 @@
 import math
 from random import random, choice
 
-class Node:
+class Node(object):
   def __init__(self):
     self.children=[]
 
@@ -27,6 +27,9 @@ class Operation(Node):
       self.children.append(r)
   
   def printf(self):
+    return '('+self.left().printf()+self.operation+self.right().printf()+')'
+
+  def __repr__(self):
     return '('+self.left().printf()+self.operation+self.right().printf()+')'
       
 # moze zamiast osobnych klas operacji zrobic jakiegos switcha w operation?
@@ -63,6 +66,9 @@ class OpSinus(Operation):
   
   def printf(self):
     return self.operation+'('+self.left().printf()+')'
+
+  def __repr__(self):
+    return self.operation+'('+self.left().printf()+')'
   
 class Argument(Node): #variable?
  
@@ -74,6 +80,9 @@ class Argument(Node): #variable?
     return tab[self.argument]
     
   def printf(self):
+    return self.argument
+
+  def __repr__(self):
     return self.argument
   
   
@@ -87,6 +96,9 @@ class Constant(Node): #Number?
     return self.value
 
   def printf(self):
+    return str(self.value)
+
+  def __repr__(self):
     return str(self.value)
     
 def generateExpression():
@@ -110,7 +122,7 @@ def generateExpression():
     return Constant(random())
 
 exp = generateExpression()
-print exp.printf()
+print exp
 print '=', exp.evaluate({'a':1.2,'b':1})
 
 #exp=OpMultiply(OpPlus(Constant(1.0),Constant(2.0)),Argument('b'))
