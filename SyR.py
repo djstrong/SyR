@@ -1,5 +1,5 @@
 import math
-from random import random, randint, choice
+from random import random, choice
 
 class Node:
   def __init__(self):
