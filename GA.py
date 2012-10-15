@@ -1,5 +1,5 @@
 from SyR import * 
-from random import random, randint, choice
+from random import random, randint, choice, uniform
 import copy
 
 class Problem:
@@ -19,13 +19,13 @@ class Problem:
 
 class GA(object):
     step_count = 100
-    size = 10
+    size = 100
     
     def __init__(self):
-        data = [[2.0,3.0,6.0], [3.0,4.0,12.0]]
-        arguments = ['a','b']
+        data = [[2.0,3.0,6.0], [3.0,4.0,12.0], [0.2, 5.0, 1.0]]
+        self.arguments = ['a','b']
         
-        self.problem = Problem(data, arguments)
+        self.problem = Problem(data, self.arguments)
         self.steps = [self.select,self.reproduce,self.mutate]
         
     def calculateErrors(self, population):
@@ -63,8 +63,14 @@ class GA(object):
     
     def mutate(self,population):
 	for exp in population:
-	    if random()<0.1:
-		pass
+	    if random()<0.5:
+		if isinstance(exp, Constant):
+		    exp.value *= uniform(-2.0, 2.0)
+		elif isinstance(exp, Argument):
+		    exp.argument = choice(self.arguments)
+		else:
+		    #mutacja operatorw
+		    pass
 		#mutacja
         return population
     
@@ -79,7 +85,7 @@ class GA(object):
                 population = step(population)
 	    
 	    population = self.calculateErrors(population)
-            print [exp.error for exp in population]
+            #print [exp.error for exp in population]
             
         population = self.calculateErrors(population)
         for exp in sorted(population, key=lambda exp: exp.error):
