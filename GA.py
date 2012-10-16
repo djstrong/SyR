@@ -18,15 +18,17 @@ class Problem:
 
 
 class GA(object):
-    step_count = 100
-    size = 100
     
     def __init__(self):
-        data = [[2.0,3.0,7.0], [3.0,4.0,13.0], [0.2, 5.0, 2.0]]
+	self.step_count = 100
+	self.size = 100
+        #data = [[2.0,3.0,9.0], [3.0,4.0,15.0], [0.2, 5.0, 4.0]]
+        data = [ [x,x+1,x*(x+1)+x+x/(x+1)] for x in range(100) ]
         self.arguments = ['a','b']
         
         self.problem = Problem(data, self.arguments)
         self.steps = [self.makeUnique, self.select,self.reproduce,self.mutate]
+        self.chart = []
         
     def calculateErrors(self, population):
 	newPopulation = []
@@ -54,8 +56,8 @@ class GA(object):
 	
     def select(self, population):
 	population = self.calculateErrors(population)
-	newPopulation = sorted(population, key=lambda exp: (len(str(exp)), exp.error))[:len(population)/4]
-	newPopulation.extend(sorted(population, key=lambda exp: (exp.error, len(str(exp))))[:len(population)/4])
+	newPopulation = sorted(population, key=lambda exp: (len(getNodeList(exp)), exp.error))[:len(population)/4]
+	newPopulation.extend(sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))[:len(population)/4])
 	return newPopulation
     
     def reproduce(self, population):
@@ -102,6 +104,7 @@ class GA(object):
 	    
 	    population = self.calculateErrors(population)
             #print [exp.error for exp in population]
+            self.chart.append(min([exp.error for exp in population]))
             
         population = self.makeUnique(population)
         population = self.calculateErrors(population)
@@ -120,8 +123,18 @@ if __name__=="__main__":
     arguments = ['a','b']
     problem = Problem(data, arguments)
 
-    ga = GA()
-    ga.evolve()
+    charts = []
+    for i in range(10):
+	ga = GA()
+	ga.evolve()
+	charts.append(ga.chart)
+	
+    charts = zip(*charts)
+    f = open('data', 'w')    
+    for nr, line in enumerate(charts):
+	print str(nr)+"\t"+str(sum(line)/len(line))+"\t"+str(sum(line)/len(line)-min(line))+"\t"+str(max(line)-sum(line)/len(line))
+	f.write(str(nr)+"\t"+str(sum(line)/len(line))+"\t"+str(min(line))+"\t"+str(max(line))+"\n")
+    
     #while(True):
     #  exp = generateExpression()
     #  try:

@@ -1,5 +1,5 @@
 import math
-from random import random, choice
+from random import random, choice, uniform
 
 class Node(object):
   def __init__(self):
@@ -140,7 +140,7 @@ def generateExpression():
   elif p<0.8:
     return Argument(choice(args))
   else:
-    return Constant(random())
+    return Constant(uniform(-1.0, 1.0))
 
 def getNodeList(exp):
   nodes=[]
