@@ -54,7 +54,9 @@ class GA(object):
 	
     def select(self, population):
 	population = self.calculateErrors(population)
-	return sorted(population, key=lambda exp: exp.error)[:len(population)/2]
+	newPopulation = sorted(population, key=lambda exp: (len(str(exp)), exp.error))[:len(population)/4]
+	newPopulation.extend(sorted(population, key=lambda exp: (exp.error, len(str(exp))))[:len(population)/4])
+	return newPopulation
     
     def reproduce(self, population):
 	newPopulation = []
