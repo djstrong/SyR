@@ -14,20 +14,28 @@ class Problem:
       for n,a in enumerate(self.arguments):
 	d[a]=line[n]
       error+=(exp.evaluate(d)-line[-1])**2.0
-    return error**0.5
-
+    exp.error = (error/len(self.data))**0.5
+    return exp.error
+    
 
 class GA(object):
     
-    def __init__(self):
+    def __init__(self, data, arguments):
 	self.step_count = 100
 	self.size = 100
         #data = [[2.0,3.0,9.0], [3.0,4.0,15.0], [0.2, 5.0, 4.0]]
-        data = [ [x,x+1,x*(x+1)+x+x/(x+1)] for x in range(100) ]
-        self.arguments = ['a','b']
+        self.data = data#[ [x,x+1,x*(x+1)+x+float(x)/(x+1)] for x in range(100) ]
+        
+        ys = []
+        for line in data:
+	  ys.append(line[-1])
+        self.mini = min(ys)
+        self.maxi = max(ys)
+        
+        self.arguments = arguments # ['a','b']
         
         self.problem = Problem(data, self.arguments)
-        self.steps = [self.makeUnique, self.select,self.reproduce,self.mutate]
+        self.steps = [self.makeUnique, self.select,self.reproduce,self.calculateErrors,self.mutate]
         self.chart = []
         
     def calculateErrors(self, population):
@@ -38,11 +46,16 @@ class GA(object):
 	    except:
 		continue
 	    newPopulation.append(exp)
+	
+	d = self.maxi - self.mini
+	for exp in newPopulation:
+	  exp.error = exp.error/d
+	    
 	return newPopulation
 	
     def addUniques(self, population):
 	while (len(population)<self.size):
-	    exp = generateExpression()
+	    exp = generateExpression(self.problem)
 	    if exp not in population:
 		population.append(exp)
 	
@@ -70,7 +83,7 @@ class GA(object):
 	    nodes2 = getNodeList(exp2)
 	    nodes1 = getNodeListWithoutLeafs(expNew)
 	    if not nodes2 or not nodes1:
-		newPopulation.append(generateExpression())
+		newPopulation.append(generateExpression(self.problem))
 		continue # zmneijsza sie ilosc, moze losowych dolozyc?
 	    node2 = choice(nodes2)
 	    node1 = choice(nodes1)
@@ -82,9 +95,23 @@ class GA(object):
     def mutate(self,population):
 	for exp in population:
 	    if random()<1.0:
-		if isinstance(exp, Constant):
-		    exp.value += uniform(-2.0, 2.0)
-		elif isinstance(exp, Argument):
+		node = choice(getNodeListWithRoot(exp))
+		if isinstance(node, Constant):
+		    ds = [0.9, 1.1, -0.9, -1.1]
+		    oldValue = node.value
+		    newValue = node.value
+		    evaluatedOld = self.problem.error1(exp)
+		    
+		    for d in ds:
+		      node.value = oldValue*d
+		      
+		      if self.problem.error1(exp)<evaluatedOld:
+			newValue = oldValue*d
+			evaluatedOld = self.problem.error1(exp)
+		    
+		    node.value = newValue
+		    
+		elif isinstance(node, Argument):
 		    exp.argument = choice(self.arguments)
 		else:
 		    #mutacja operatorw
@@ -93,7 +120,7 @@ class GA(object):
         return population
     
     def generate_population(self):
-        return [generateExpression() for i in range(self.size)]
+        return [generateExpression(self.problem) for i in range(self.size)]
         
     def evolve(self):
         population = self.generate_population()
@@ -109,8 +136,7 @@ class GA(object):
         population = self.makeUnique(population)
         population = self.calculateErrors(population)
         population = sorted(population, key=lambda exp: exp.error)
-        for exp in population:
-	    print exp.error, exp
+        self.population = population
 	    
 	#print population[0]==population[1]
 	#print population[0].printf()==population[1].printf()
@@ -119,24 +145,36 @@ class GA(object):
 
 
 if __name__=="__main__":    
-    data = [[2.0,3.0,6.0], [3.0,4.0,12.0]]
-    arguments = ['a','b']
-    problem = Problem(data, arguments)
+    #data = [[2.0,3.0,6.0], [3.0,4.0,12.0]]
+    #arguments = ['a','b']
+    #problem = Problem(data, arguments)
 
+    data = []
+    for i in range(100):
+      x=uniform(-1.0,1.0)
+      data.append([x, 1.57 + (24.3*x)])
+      #data.append([x, x**5.0-2.0*x**3.0+x])
+      #data.append([x, x**6.0-2.0*x**4.0+x**2.0])
+
+    arguments = ['x']
+    
     charts = []
-    for i in range(10):
-	ga = GA()
+    bestExpressions = []
+    for i in range(1):
+	ga = GA(data, arguments)
 	ga.evolve()
+	for exp in ga.population:
+	    print exp.error, exp
 	charts.append(ga.chart)
 	
     charts = zip(*charts)
     f = open('data', 'w')    
     for nr, line in enumerate(charts):
-	print str(nr)+"\t"+str(sum(line)/len(line))+"\t"+str(sum(line)/len(line)-min(line))+"\t"+str(max(line)-sum(line)/len(line))
+	print str(nr)+"\t"+str(sum(line)/len(line))+"\t"+str(min(line))+"\t"+str(max(line))
 	f.write(str(nr)+"\t"+str(sum(line)/len(line))+"\t"+str(min(line))+"\t"+str(max(line))+"\n")
     
     #while(True):
-    #  exp = generateExpression()
+    #  exp = generateExpression(self.problem)
     #  try:
     #    error = problem.error1(exp)
     #  except:

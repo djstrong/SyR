@@ -122,26 +122,32 @@ class Constant(Node): #Number?
     
     return False
     
-def generateExpression():
+def generateExpression(problem):
   ops1arg = [OpSinus]
   ops2arg = [OpPlus,OpMinus,OpMultiply,OpDivide]
-  args=['a','b']
+  args=problem.arguments
   
   p = random()
   if p<0.3:
     op = choice(ops2arg)
-    left = generateExpression()
-    right = generateExpression()
+    left = generateExpression(problem)
+    right = generateExpression(problem)
     return op(left, right)
   elif p<0.5:
     op = choice(ops1arg)
-    left = generateExpression()
+    left = generateExpression(problem)
     return op(left)
   elif p<0.8:
     return Argument(choice(args))
   else:
     return Constant(uniform(-1.0, 1.0))
 
+    
+def getNodeListWithRoot(exp):
+  nodes = [exp]
+  nodes.extend(getNodeList(exp))
+  return nodes
+  
 def getNodeList(exp):
   nodes=[]
   if hasattr(exp, 'children'):
