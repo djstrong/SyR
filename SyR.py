@@ -65,7 +65,11 @@ class OpDivide(Operation):
   operation='/'
   
   def evaluate(self, tab):
-    return self.left().evaluate(tab)/self.right().evaluate(tab)
+    denominator = self.right().evaluate(tab)
+    if denominator==0.0:
+      return 1.0
+    else:
+      return self.left().evaluate(tab)/denominator
   
 class OpSinus(Operation):
   operation='sin'
@@ -105,6 +109,7 @@ class Constant(Node): #Number?
   def __init__(self, value):
     #Node.__init__(self)
     self.value=value
+    self.notImprovedMutation = 1 #
   
   def evaluate(self, tab):
     return self.value
@@ -128,7 +133,7 @@ def generateExpression(problem):
   args=problem.arguments
   
   p = random()
-  if p<0.3:
+  if p<0.4:
     op = choice(ops2arg)
     left = generateExpression(problem)
     right = generateExpression(problem)
