@@ -1,6 +1,7 @@
 from SyR import * 
 from random import random, randint, choice, uniform
 import copy
+from multiprocessing import Process, Queue
 
 class Problem:
   def __init__(self, data, arguments):
@@ -69,8 +70,8 @@ class GA(object):
 	
     def select(self, population):
 	population = self.calculateErrors(population)
-	newPopulation = sorted(population, key=lambda exp: (len(getNodeList(exp)), exp.error))[:len(population)/4]
-	newPopulation.extend(sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))[:len(population)/4])
+	newPopulation = sorted(population, key=lambda exp: (len(getNodeList(exp)), exp.error))[:len(population)/8]
+	newPopulation.extend(sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))[:len(population)/2])
 	return newPopulation
     
     def reproduce(self, population):
@@ -97,19 +98,23 @@ class GA(object):
 	    if random()<1.0:
 		node = choice(getNodeListWithRoot(exp))
 		if isinstance(node, Constant):
-		    ds = [0.9, 1.1, -0.9, -1.1]
+		    es = [0.1, -0.1]
+		    ds = [1.0, -1.0]
 		    oldValue = node.value
 		    newValue = node.value
 		    evaluatedOld = self.problem.error1(exp)
 		    
-		    for d in ds:
-		      node.value = oldValue*d
-		      
-		      if self.problem.error1(exp)<evaluatedOld:
-			newValue = oldValue*d
-			evaluatedOld = self.problem.error1(exp)
+		    for e in es:
+		      for d in ds:
+			node.value = oldValue*(d+e/node.notImprovedMutation)
+			
+			if self.problem.error1(exp)<evaluatedOld:
+			  newValue = oldValue*(d+e/node.notImprovedMutation)
+			  evaluatedOld = self.problem.error1(exp)
 		    
 		    node.value = newValue
+		    #if oldValue==newValue:
+		    #  node.notImprovedMutation += 1 # przy kazdej zmianie wyrazenia trzeba by chyba "zerowac"?
 		    
 		elif isinstance(node, Argument):
 		    exp.argument = choice(self.arguments)
@@ -126,6 +131,7 @@ class GA(object):
         population = self.generate_population()
         
         for i in range(self.step_count):
+	    print i
             for step in self.steps:
                 population = step(population)
 	    
@@ -142,7 +148,14 @@ class GA(object):
 	#print population[0].printf()==population[1].printf()
         
     
-
+def f(data, arguments, q, nr):
+  ga = GA(data, arguments)
+  ga.evolve()
+  print 'nr = ', i
+  for exp in ga.population:
+      print exp.error, exp
+  #charts.append(ga.chart)
+  q.put(ga.chart)
 
 if __name__=="__main__":    
     #data = [[2.0,3.0,6.0], [3.0,4.0,12.0]]
@@ -152,20 +165,46 @@ if __name__=="__main__":
     data = []
     for i in range(100):
       x=uniform(-1.0,1.0)
-      data.append([x, 1.57 + (24.3*x)])
+      y=uniform(-1.0,1.0)
+      z=uniform(-1.0,1.0)
+      #ACCURACY IN SYMBOLIC REGRESSION
+      #data.append([x, 1.57 + (24.3*x)]) #P1
+      #data.append([x, 0.23 + (14.2*((y+x)/(3.0*z)))]) #P2
+      #data.append([x, -2.3 + (0.13*math.sin(x))]) #P4
+      
+      #Improving Symbolic Regression with Interval Arithmetic and Linear Scaling
+      #data.append([x, 0.3*x*math.sin(2.0*x)]) #(4)
+      #data.append([x, y, 8.0/(2.0 + x**2 + y**2) ]) #(15)
+      data.append([x, y, (x*x + y*y) ]) #(15)
+
       #data.append([x, x**5.0-2.0*x**3.0+x])
       #data.append([x, x**6.0-2.0*x**4.0+x**2.0])
 
-    arguments = ['x']
+    arguments = ['x','y']
     
     charts = []
     bestExpressions = []
-    for i in range(1):
-	ga = GA(data, arguments)
-	ga.evolve()
-	for exp in ga.population:
-	    print exp.error, exp
-	charts.append(ga.chart)
+    
+    runs = 4
+    ps = []
+    q = Queue()
+    for i in range(runs):
+      p = Process(target=f, args=(data, arguments, q, i, ))
+      ps.append(p)
+      p.start()
+    
+    for p in ps:
+      p.join()
+      
+    for i in range(runs):
+      charts.append(q.get())
+    
+    #for i in range(1):
+#	ga = GA(data, arguments)
+#	ga.evolve()
+#	for exp in ga.population:
+#	    print exp.error, exp
+#	charts.append(ga.chart)
 	
     charts = zip(*charts)
     f = open('data', 'w')    
