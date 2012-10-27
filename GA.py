@@ -2,6 +2,9 @@ from SyR import *
 from random import random, randint, choice, uniform
 import copy
 from multiprocessing import Process, Queue
+from multiprocessing import Pool
+import pickle
+
 
 class Problem:
   def __init__(self, data, arguments):
@@ -18,6 +21,12 @@ class Problem:
     exp.error = (error/len(self.data))**0.5
     return exp.error
     
+
+def forPool(arg):
+    problem, x = arg
+    x.error = problem.error1(x)
+    #print 'err', x.error
+    return x.error
 
 class GA(object):
     
@@ -36,10 +45,25 @@ class GA(object):
         self.arguments = arguments # ['a','b']
         
         self.problem = Problem(data, self.arguments)
-        self.steps = [self.makeUnique, self.select,self.reproduce,self.calculateErrors,self.mutate]
+        self.steps = [self.select,self.reproduce,self.calculateErrors,self.mutate]
         self.chart = []
-        
+
+	self.pool = Pool(processes=4)
+       
     def calculateErrors(self, population):
+        results =  self.pool.map(forPool, [(self.problem, exp) for exp in population], 5)
+        
+	for n, exp in enumerate(population):
+	    exp.error = results[n]
+ 
+ 	d = self.maxi - self.mini
+	for exp in population:
+	  exp.error = exp.error/d
+	  
+	return population
+ 
+ 
+    def calculateErrors2(self, population):
 	newPopulation = []
         for exp in population:
 	    try:
@@ -70,8 +94,8 @@ class GA(object):
 	
     def select(self, population):
 	population = self.calculateErrors(population)
-	newPopulation = sorted(population, key=lambda exp: (len(getNodeList(exp)), exp.error))[:len(population)/8]
-	newPopulation.extend(sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))[:len(population)/2])
+	#newPopulation = sorted(population, key=lambda exp: (len(getNodeList(exp)), exp.error))[:len(population)/8]
+	newPopulation = sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))[:len(population)/2]
 	return newPopulation
     
     def reproduce(self, population):
@@ -131,7 +155,7 @@ class GA(object):
         population = self.generate_population()
         
         for i in range(self.step_count):
-	    print i
+	    print i, len(population)
             for step in self.steps:
                 population = step(population)
 	    
@@ -161,6 +185,7 @@ if __name__=="__main__":
     #data = [[2.0,3.0,6.0], [3.0,4.0,12.0]]
     #arguments = ['a','b']
     #problem = Problem(data, arguments)
+
 
     data = []
     for i in range(100):
