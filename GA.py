@@ -1,10 +1,10 @@
 from SyR import * 
-from random import random, randint, choice, uniform
+from random import random, randint, choice, uniform, seed, shuffle
 import copy
 from multiprocessing import Process, Queue
 from multiprocessing import Pool
 import pickle
-
+import time
 
 class Problem:
   def __init__(self, data, arguments):
@@ -28,10 +28,28 @@ class Problem:
     
 
 def forPool(arg):
+   
     problem, x = arg
     x.error = problem.error1(x)
     #print 'err', x.error
     return x.error
+
+def forPool2(arg):
+    exp, exp2, problem = arg
+    nodes2 = getNodeList(exp2)
+    seed(len(nodes2))
+    
+    expNew = copy.deepcopy(exp)
+    nodes1 = getNodeListWithoutLeafs(expNew)
+
+    node2 = choice(nodes2)
+    node1 = choice(nodes1)
+    
+    ran = randint(0,len(node1.children)-1)
+    node1.children[ran] = copy.deepcopy(node2)
+    node1.children[ran].parent = node1
+    node1.evaluateProblemUp(problem)
+    return expNew
 
 class GA(object):
     
@@ -50,22 +68,10 @@ class GA(object):
         self.arguments = arguments # ['a','b']
         
         self.problem = Problem(data, self.arguments)
-        self.steps = [self.select,self.reproduce,self.calculateErrors,self.mutate]
+        self.steps = [self.select,self.reproduce,self.mutate]
         self.chart = []
 
-	#self.pool = Pool(processes=4)
-
-    def calculateErrors(self, population):
-	return population
-	d = self.maxi - self.mini
-        for exp in population:
-	  #exp.evaluateProblem(self.problem)
-	  exp.error = 0.0
-	  for n in xrange(len(self.problem.data)):
-	    exp.error+=(exp.evaluatedProblem[n]-self.problem.data[n][-1])**2.0
-	  exp.error = (exp.error/len(self.problem.data))**0.5/d
-	  
-	return population
+	self.pool = Pool(processes=8)
        
     def calculateErrors22(self, population):
         for exp in population:
@@ -81,22 +87,7 @@ class GA(object):
 	  exp.error = exp.error/d
 	  
 	return population
- 
- 
-    def calculateErrors2(self, population):
-	newPopulation = []
-        for exp in population:
-	    try:
-		exp.error = self.problem.error1(exp)
-	    except:
-		continue
-	    newPopulation.append(exp)
-	
-	d = self.maxi - self.mini
-	for exp in newPopulation:
-	  exp.error = exp.error/d
-	    
-	return newPopulation
+
 	
     def addUniques(self, population):
 	while (len(population)<self.size):
@@ -113,29 +104,49 @@ class GA(object):
 	return newPopulation
 	
     def select(self, population):
-	population = self.calculateErrors(population)
 	#newPopulation = sorted(population, key=lambda exp: (len(getNodeList(exp)), exp.error))[:len(population)/8]
 	newPopulation = sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))[:len(population)/2]
 	return newPopulation
     
     def reproduce(self, population):
 	newPopulation = list(population)
+	
+	#print len(population), len(filter(lambda x: x,map(lambda x: getNodeListWithoutLeafs(x), population)))
+	population1 = filter(lambda x: getNodeListWithoutLeafs(x), population)
+	population2 = filter(lambda x: getNodeList(x), population)
+	#print len(population1), len(population1)
+	#population1 = filter(lambda x: getNodeListWithoutLeafs(x), population)
+	#population2 = filter(lambda x: getNodeList(x), population)
+	#print len(population1), len(population1)
+	#TODO make parallel copy
+	
+	pairs = []
+	for i in xrange(self.size - len(newPopulation)):
+	  pairs.append( (choice(population1), choice(population2), self.problem) )
+
+	results =  self.pool.map(forPool2, pairs)
+        #results =  map(forPool2, pairs)
+        
+	newPopulation.extend(results)
+	return newPopulation
+	
 	while len(newPopulation)<self.size:
-	  for exp in population:
+	  for exp in population1:
 	      if len(newPopulation)>=self.size: break
 	      if (__debug__): print 'Reproduction'
 	      #newPopulation.append(exp)
 	      
-	      exp2 = choice(population)
+	      exp2 = choice(population2)
 	      nodes2 = getNodeList(exp2)
-	      if not nodes2: continue
+	      #if not nodes2: print 'dupa2'
 	      
 	      expNew = copy.deepcopy(exp)
 	      nodes1 = getNodeListWithoutLeafs(expNew)
 
-	      if not nodes1:
+	      #if not nodes1:
+		#  print 'dupa'
 		  #newPopulation.append(generateExpression(self.problem))
-		  continue # zmneijsza sie ilosc, moze losowych dolozyc?
+		#  continue # zmneijsza sie ilosc, moze losowych dolozyc?
 	      node2 = choice(nodes2)
 	      node1 = choice(nodes1)
 	      
@@ -197,7 +208,7 @@ class GA(object):
             for step in self.steps:
                 population = step(population)
 	    
-	    population = self.calculateErrors(population)
+
             #print [exp.error for exp in population]
             #population = sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))
             #print [exp.error for exp in population]
@@ -208,7 +219,7 @@ class GA(object):
             self.chart.append(mini)
             
         population = self.makeUnique(population)
-        population = self.calculateErrors(population)
+
         population = sorted(population, key=lambda exp: exp.error)
         self.population = population
 	    
@@ -229,8 +240,11 @@ if __name__=="__main__":
     #data = [[2.0,3.0,6.0], [3.0,4.0,12.0]]
     #arguments = ['a','b']
     #problem = Problem(data, arguments)
-
-
+    time = time.time()
+    print 'Seed:', time
+    seed(time)
+    seed(0)
+    
     data = []
     for i in range(100):
       x=uniform(-1.0,1.0)
@@ -271,8 +285,8 @@ if __name__=="__main__":
     for i in range(1):
 	ga = GA(data, arguments)
 	ga.evolve()
-#	for exp in ga.population:
-#	    print exp.error, exp
+	for exp in ga.population:
+	    print exp.error, exp
 	charts.append(ga.chart)
 	
     charts = zip(*charts)
