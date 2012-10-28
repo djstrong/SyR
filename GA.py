@@ -23,7 +23,7 @@ class Problem:
 def reproduction(arg):
     exp, exp2, problem = arg
     nodes2 = getNodeList(exp2)
-    seed(len(nodes2))
+    #seed(len(nodes2))
     
     expNew = copy.deepcopy(exp)
     nodes1 = getNodeListWithoutLeafs(expNew)
@@ -141,7 +141,7 @@ if __name__=="__main__":
     time = time.time()
     print 'Seed:', time
     seed(time)
-    seed(0)
+    #seed(0)
     
     data = []
     for i in range(100):
