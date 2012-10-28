@@ -53,7 +53,7 @@ class GA(object):
         self.steps = [self.select,self.reproduce,self.calculateErrors,self.mutate]
         self.chart = []
 
-	self.pool = Pool(processes=4)
+	#self.pool = Pool(processes=4)
 
     def calculateErrors(self, population):
 	return population
@@ -127,11 +127,13 @@ class GA(object):
 	      #newPopulation.append(exp)
 	      
 	      exp2 = choice(population)
-	      expNew = copy.deepcopy(exp)
 	      nodes2 = getNodeList(exp2)
+	      if not nodes2: continue
+	      
+	      expNew = copy.deepcopy(exp)
 	      nodes1 = getNodeListWithoutLeafs(expNew)
 
-	      if not nodes2 or not nodes1:
+	      if not nodes1:
 		  #newPopulation.append(generateExpression(self.problem))
 		  continue # zmneijsza sie ilosc, moze losowych dolozyc?
 	      node2 = choice(nodes2)
@@ -191,7 +193,7 @@ class GA(object):
         population = self.generate_population()
         
         for i in range(self.step_count):
-	    print i, len(population)
+	    
             for step in self.steps:
                 population = step(population)
 	    
@@ -201,7 +203,9 @@ class GA(object):
             #print [exp.error for exp in population]
             #print min([exp.error for exp in population])
             #print sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))[:10]
-            self.chart.append(min([exp.error for exp in population]))
+            mini = min([exp.error for exp in population])
+            print 'Iteration:', i, '\tPopulation:', len(population), '\tBest:', mini
+            self.chart.append(mini)
             
         population = self.makeUnique(population)
         population = self.calculateErrors(population)
@@ -252,24 +256,24 @@ if __name__=="__main__":
     
     runs = 1
     ps = []
-    q = Queue()
-    for i in range(runs):
-      p = Process(target=f, args=(data, arguments, q, i, ))
-      ps.append(p)
-      p.start()
+#    q = Queue()
+#    for i in range(runs):
+#      p = Process(target=f, args=(data, arguments, q, i, ))
+#      ps.append(p)
+#      p.start()
     
-    for p in ps:
-      p.join()
+#    for p in ps:
+#      p.join()
       
-    for i in range(runs):
-      charts.append(q.get())
+#    for i in range(runs):
+#      charts.append(q.get())
     
-    #for i in range(1):
-#	ga = GA(data, arguments)
-#	ga.evolve()
+    for i in range(1):
+	ga = GA(data, arguments)
+	ga.evolve()
 #	for exp in ga.population:
 #	    print exp.error, exp
-#	charts.append(ga.chart)
+	charts.append(ga.chart)
 	
     charts = zip(*charts)
     f = open('data', 'w')    

@@ -260,13 +260,13 @@ def generateExpression2(problem):
     left.parent = ex
     right.parent = ex
     return ex
-  elif p<0.5:
+  elif p<0.4:
     op = choice(ops1arg)
     left = generateExpression(problem)
     ex = op(left)
     left.parent = ex
     return ex
-  elif p<0.95:
+  elif p<0.9:
     return Argument(choice(args))
   else:
     return Constant(uniform(-1.0, 1.0))

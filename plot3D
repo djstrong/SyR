@@ -1,0 +1,5 @@
+set xrange [-1:1]
+set yrange [-1:1]
+set hidden3d
+set isosample 20,20
+splot ((y+(x*x))+((y*y)-y)), x*x+y*y, ((y+(x*x))+((y*(y+(x*x)))-y))
