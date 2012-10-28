@@ -19,7 +19,7 @@ class Node(object):
   
   def calcError(self, problem):
     if (__debug__): print 'Error calculation'
-    d = problem.maxi - problem.mini
+    d = problem.d
 
     self.error = 0.0
     for n in xrange(len(problem.data)):
@@ -260,7 +260,7 @@ def generateExpression2(problem):
     left.parent = ex
     right.parent = ex
     return ex
-  elif p<0.4:
+  elif p<0.5:
     op = choice(ops1arg)
     left = generateExpression(problem)
     ex = op(left)
@@ -270,10 +270,7 @@ def generateExpression2(problem):
     return Argument(choice(args))
   else:
     return Constant(uniform(-1.0, 1.0))
-
-def updateProblemEvaluation(node):
-  pass
-    
+ 
 def getNodeListWithRoot(exp):
   nodes = [exp]
   nodes.extend(getNodeList(exp))

@@ -1,40 +1,26 @@
 from SyR import * 
 from random import random, randint, choice, uniform, seed, shuffle
 import copy
-from multiprocessing import Process, Queue
-from multiprocessing import Pool
 import pickle
 import time
+try:
+  from multiprocessing import Process, Queue, Pool
+  MULTIPROCESSING = True
+except ImportError:
+  MULTIPROCESSING = False
 
 class Problem:
   def __init__(self, data, arguments):
     self.data=data
     self.arguments=arguments
+    
+    # for error calculation
     ys = []
     for line in data:
       ys.append(line[-1])
-    self.mini = min(ys)
-    self.maxi = max(ys)
+    self.d = max(ys) - min(ys)
         
-  def error1(self, exp):
-    error=0.0
-    for line in self.data:
-      d = {}
-      for n,a in enumerate(self.arguments):
-	d[a]=line[n]
-      error+=(exp.evaluate(d)-line[-1])**2.0
-    exp.error = (error/len(self.data))**0.5
-    return exp.error
-    
-
-def forPool(arg):
-   
-    problem, x = arg
-    x.error = problem.error1(x)
-    #print 'err', x.error
-    return x.error
-
-def forPool2(arg):
+def reproduction(arg):
     exp, exp2, problem = arg
     nodes2 = getNodeList(exp2)
     seed(len(nodes2))
@@ -56,53 +42,16 @@ class GA(object):
     def __init__(self, data, arguments):
 	self.step_count = 100
 	self.size = 100
-        #data = [[2.0,3.0,9.0], [3.0,4.0,15.0], [0.2, 5.0, 4.0]]
-        self.data = data#[ [x,x+1,x*(x+1)+x+float(x)/(x+1)] for x in range(100) ]
-        
-        ys = []
-        for line in data:
-	  ys.append(line[-1])
-        self.mini = min(ys)
-        self.maxi = max(ys)
-        
-        self.arguments = arguments # ['a','b']
+
+        self.data = data
+        self.arguments = arguments
         
         self.problem = Problem(data, self.arguments)
         self.steps = [self.select,self.reproduce,self.mutate]
         self.chart = []
 
-	self.pool = Pool(processes=8)
+	if MULTIPROCESSING: self.pool = Pool(processes=8)
        
-    def calculateErrors22(self, population):
-        for exp in population:
-	  exp.evaluateProblem(self.problem)
-        
-        results =  self.pool.map(forPool, [(self.problem, exp) for exp in population], 5)
-        
-	for n, exp in enumerate(population):
-	    exp.error = results[n]
- 
- 	d = self.maxi - self.mini
-	for exp in population:
-	  exp.error = exp.error/d
-	  
-	return population
-
-	
-    def addUniques(self, population):
-	while (len(population)<self.size):
-	    exp = generateExpression(self.problem)
-	    if exp not in population:
-		population.append(exp)
-	
-    def makeUnique(self, population):
-	newPopulation = []
-	for exp in population:
-	    if exp not in newPopulation:
-		newPopulation.append(exp)
-	self.addUniques(newPopulation)
-	return newPopulation
-	
     def select(self, population):
 	#newPopulation = sorted(population, key=lambda exp: (len(getNodeList(exp)), exp.error))[:len(population)/8]
 	newPopulation = sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))[:len(population)/2]
@@ -110,54 +59,19 @@ class GA(object):
     
     def reproduce(self, population):
 	newPopulation = list(population)
-	
-	#print len(population), len(filter(lambda x: x,map(lambda x: getNodeListWithoutLeafs(x), population)))
+
 	population1 = filter(lambda x: getNodeListWithoutLeafs(x), population)
 	population2 = filter(lambda x: getNodeList(x), population)
-	#print len(population1), len(population1)
-	#population1 = filter(lambda x: getNodeListWithoutLeafs(x), population)
-	#population2 = filter(lambda x: getNodeList(x), population)
-	#print len(population1), len(population1)
-	#TODO make parallel copy
 	
 	pairs = []
 	for i in xrange(self.size - len(newPopulation)):
 	  pairs.append( (choice(population1), choice(population2), self.problem) )
 
-	results =  self.pool.map(forPool2, pairs)
-        #results =  map(forPool2, pairs)
+	if MULTIPROCESSING: results =  self.pool.map(reproduction, pairs)
+        else: results =  map(reproduction, pairs)
         
 	newPopulation.extend(results)
 	return newPopulation
-	
-	while len(newPopulation)<self.size:
-	  for exp in population1:
-	      if len(newPopulation)>=self.size: break
-	      if (__debug__): print 'Reproduction'
-	      #newPopulation.append(exp)
-	      
-	      exp2 = choice(population2)
-	      nodes2 = getNodeList(exp2)
-	      #if not nodes2: print 'dupa2'
-	      
-	      expNew = copy.deepcopy(exp)
-	      nodes1 = getNodeListWithoutLeafs(expNew)
-
-	      #if not nodes1:
-		#  print 'dupa'
-		  #newPopulation.append(generateExpression(self.problem))
-		#  continue # zmneijsza sie ilosc, moze losowych dolozyc?
-	      node2 = choice(nodes2)
-	      node1 = choice(nodes1)
-	      
-	      ran = randint(0,len(node1.children)-1)
-	      node1.children[ran] = copy.deepcopy(node2)
-	      node1.children[ran].parent = node1
-	      node1.evaluateProblemUp(self.problem)
-	      newPopulation.append(expNew)
-	      
-	    
-        return newPopulation
     
     def mutate(self,population):
 	for exp in population:
@@ -194,7 +108,6 @@ class GA(object):
 		else:
 		    #mutacja operatorw
 		    pass
-		#mutacja
         return population
     
     def generate_population(self):
@@ -204,42 +117,27 @@ class GA(object):
         population = self.generate_population()
         
         for i in range(self.step_count):
-	    
             for step in self.steps:
                 population = step(population)
-	    
 
-            #print [exp.error for exp in population]
-            #population = sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))
-            #print [exp.error for exp in population]
-            #print min([exp.error for exp in population])
-            #print sorted(population, key=lambda exp: (exp.error, len(getNodeList(exp))))[:10]
             mini = min([exp.error for exp in population])
             print 'Iteration:', i, '\tPopulation:', len(population), '\tBest:', mini
             self.chart.append(mini)
             
-        population = self.makeUnique(population)
 
         population = sorted(population, key=lambda exp: exp.error)
         self.population = population
-	    
-	#print population[0]==population[1]
-	#print population[0].printf()==population[1].printf()
         
     
-def f(data, arguments, q, nr):
+def runGA(data, arguments, q, nr):
   ga = GA(data, arguments)
   ga.evolve()
   print 'nr = ', i
   for exp in ga.population:
       print exp.error, exp
-  #charts.append(ga.chart)
   q.put(ga.chart)
 
 if __name__=="__main__":    
-    #data = [[2.0,3.0,6.0], [3.0,4.0,12.0]]
-    #arguments = ['a','b']
-    #problem = Problem(data, arguments)
     time = time.time()
     print 'Seed:', time
     seed(time)
@@ -267,41 +165,31 @@ if __name__=="__main__":
     
     charts = []
     bestExpressions = []
-    
-    runs = 1
-    ps = []
-#    q = Queue()
-#    for i in range(runs):
-#      p = Process(target=f, args=(data, arguments, q, i, ))
-#      ps.append(p)
-#      p.start()
-    
-#    for p in ps:
-#      p.join()
+
+    if MULTIPROCESSING:
+      runs = 1
+      ps = []
+      q = Queue()
+      for i in range(runs):
+	p = Process(target=runGA, args=(data, arguments, q, i, ))
+	ps.append(p)
+	p.start()
       
-#    for i in range(runs):
-#      charts.append(q.get())
-    
-    for i in range(1):
-	ga = GA(data, arguments)
-	ga.evolve()
-	for exp in ga.population:
-	    print exp.error, exp
-	charts.append(ga.chart)
+      for p in ps:
+	p.join()
+	
+      for i in range(runs):
+	charts.append(q.get())
+    else: # no MULTIPROCESSING
+      for i in range(1):
+	  ga = GA(data, arguments)
+	  ga.evolve()
+	  for exp in ga.population:
+	      print exp.error, exp
+	  charts.append(ga.chart)
 	
     charts = zip(*charts)
     f = open('data', 'w')    
     for nr, line in enumerate(charts):
 	print str(nr)+"\t"+str(sum(line)/len(line))+"\t"+str(min(line))+"\t"+str(max(line))
 	f.write(str(nr)+"\t"+str(sum(line)/len(line))+"\t"+str(min(line))+"\t"+str(max(line))+"\n")
-    
-    #while(True):
-    #  exp = generateExpression(self.problem)
-    #  try:
-    #    error = problem.error1(exp)
-    #  except:
-    #    continue
-    #  print error
-    #  if error < 1:
-    #    print exp.printf()
-    #    break
