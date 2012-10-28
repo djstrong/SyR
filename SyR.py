@@ -14,6 +14,19 @@ class Node(object):
   def evaluate(self, tab):
     pass
   
+  def evaluateProblem(self, problem):
+    pass
+  
+  def calcError(self, problem):
+    if (__debug__): print 'Error calculation'
+    d = problem.maxi - problem.mini
+
+    self.error = 0.0
+    for n in xrange(len(problem.data)):
+      self.error+=(self.evaluatedProblem[n]-problem.data[n][-1])**2.0
+    self.error = (self.error/len(problem.data))**0.5/d
+    
+  
   def printf(self):
     pass
     
@@ -48,19 +61,66 @@ class OpPlus(Operation):
   def evaluate(self, tab):
     return self.left().evaluate(tab)+self.right().evaluate(tab)
 
+  def evaluateProblem(self, problem):
+    self.left().evaluateProblem(problem)
+    self.right().evaluateProblem(problem)
+    
+    self.evaluatedProblem = []
+    for i in xrange(len(self.left().evaluatedProblem)):
+      self.evaluatedProblem.append(self.left().evaluatedProblem[i]+self.right().evaluatedProblem[i])
+
+  def evaluateProblemUp(self, problem):
+    self.evaluatedProblem = []
+    for i in xrange(len(self.left().evaluatedProblem)):
+      self.evaluatedProblem.append(self.left().evaluatedProblem[i]+self.right().evaluatedProblem[i])
+      
+    if hasattr(self, 'parent'): self.parent.evaluateProblemUp(problem)
+    else: self.calcError(problem)
+
 class OpMinus(Operation):
   operation='-'
   
   def evaluate(self, tab):
     return self.left().evaluate(tab)-self.right().evaluate(tab)
+
+  def evaluateProblem(self, problem):
+    self.left().evaluateProblem(problem)
+    self.right().evaluateProblem(problem)
     
+    self.evaluatedProblem = []
+    for i in xrange(len(self.left().evaluatedProblem)):
+      self.evaluatedProblem.append(self.left().evaluatedProblem[i]-self.right().evaluatedProblem[i])
+      
+  def evaluateProblemUp(self, problem):
+    self.evaluatedProblem = []
+    for i in xrange(len(self.left().evaluatedProblem)):
+      self.evaluatedProblem.append(self.left().evaluatedProblem[i]-self.right().evaluatedProblem[i])
+      
+    if hasattr(self, 'parent'): self.parent.evaluateProblemUp(problem)
+    else: self.calcError(problem)
+      
 class OpMultiply(Operation):
   operation='*'
   
   def evaluate(self, tab):
     return self.left().evaluate(tab)*self.right().evaluate(tab)
   
-#co z dzieleniem przez zero
+  def evaluateProblem(self, problem):
+    self.left().evaluateProblem(problem)
+    self.right().evaluateProblem(problem)
+    
+    self.evaluatedProblem = []
+    for i in xrange(len(self.left().evaluatedProblem)):
+      self.evaluatedProblem.append(self.left().evaluatedProblem[i]*self.right().evaluatedProblem[i])
+
+  def evaluateProblemUp(self, problem):
+    self.evaluatedProblem = []
+    for i in xrange(len(self.left().evaluatedProblem)):
+      self.evaluatedProblem.append(self.left().evaluatedProblem[i]*self.right().evaluatedProblem[i])
+
+    if hasattr(self, 'parent'): self.parent.evaluateProblemUp(problem)
+    else: self.calcError(problem)
+	
 class OpDivide(Operation):
   operation='/'
   
@@ -70,7 +130,31 @@ class OpDivide(Operation):
       return 1.0
     else:
       return self.left().evaluate(tab)/denominator
-  
+
+  def evaluateProblem(self, problem):
+    self.left().evaluateProblem(problem)
+    self.right().evaluateProblem(problem)
+    
+    self.evaluatedProblem = []
+    for i in xrange(len(self.left().evaluatedProblem)):
+      denominator = self.right().evaluatedProblem[i]
+      if denominator==0.0:
+	self.evaluatedProblem.append(1.0)
+      else:
+	self.evaluatedProblem.append(self.left().evaluatedProblem[i]/denominator)
+
+  def evaluateProblemUp(self, problem):
+    self.evaluatedProblem = []
+    for i in xrange(len(self.left().evaluatedProblem)):
+      denominator = self.right().evaluatedProblem[i]
+      if denominator==0.0:
+	self.evaluatedProblem.append(1.0)
+      else:
+	self.evaluatedProblem.append(self.left().evaluatedProblem[i]/denominator)
+    
+    if hasattr(self, 'parent'): self.parent.evaluateProblemUp(problem)
+    else: self.calcError(problem)
+    
 class OpSinus(Operation):
   operation='sin'
   
@@ -82,6 +166,16 @@ class OpSinus(Operation):
 
   def __repr__(self):
     return self.operation+'('+self.left().printf()+')'
+  
+  def evaluateProblem(self, problem):
+    self.left().evaluateProblem(problem)
+
+    self.evaluatedProblem = [math.sin(val) for val in self.left().evaluatedProblem]
+    
+  def evaluateProblemUp(self, problem):
+    self.evaluatedProblem = [math.sin(val) for val in self.left().evaluatedProblem]
+    if hasattr(self, 'parent'): self.parent.evaluateProblemUp(problem)
+    else: self.calcError(problem)
   
 class Argument(Node): #variable?
  
@@ -103,6 +197,16 @@ class Argument(Node): #variable?
       if self.argument==other.argument:
 	return True
     return False
+
+  def evaluateProblem(self, problem):
+    n = problem.arguments.index(self.argument)
+    self.evaluatedProblem = [row[n] for row in problem.data]
+
+  def evaluateProblemUp(self, problem):
+    n = problem.arguments.index(self.argument)
+    self.evaluatedProblem = [row[n] for row in problem.data]
+    if hasattr(self, 'parent'): self.parent.evaluateProblemUp(problem)
+    else: self.calcError(problem)
     
 class Constant(Node): #Number?
   
@@ -126,8 +230,23 @@ class Constant(Node): #Number?
 	return True
     
     return False
+
+  def evaluateProblem(self, problem):
+    self.evaluatedProblem = [self.value for i in xrange(len(problem.data))]
+
+  def evaluateProblemUp(self, problem):
+    self.evaluatedProblem = [self.value for i in xrange(len(problem.data))]
+    if hasattr(self, 'parent'): self.parent.evaluateProblemUp(problem)
+    else: self.calcError(problem)
     
-def generateExpression(problem):
+def generateExpression(problem):    
+  if (__debug__): print 'New expression generation'
+  exp = generateExpression2(problem)
+  exp.evaluateProblem(problem)
+  exp.calcError(problem)
+  return exp
+  
+def generateExpression2(problem):
   ops1arg = [OpSinus]
   ops2arg = [OpPlus,OpMinus,OpMultiply,OpDivide]
   args=problem.arguments
@@ -137,16 +256,23 @@ def generateExpression(problem):
     op = choice(ops2arg)
     left = generateExpression(problem)
     right = generateExpression(problem)
-    return op(left, right)
+    ex = op(left, right)
+    left.parent = ex
+    right.parent = ex
+    return ex
   elif p<0.5:
     op = choice(ops1arg)
     left = generateExpression(problem)
-    return op(left)
-  elif p<0.8:
+    ex = op(left)
+    left.parent = ex
+    return ex
+  elif p<0.95:
     return Argument(choice(args))
   else:
     return Constant(uniform(-1.0, 1.0))
 
+def updateProblemEvaluation(node):
+  pass
     
 def getNodeListWithRoot(exp):
   nodes = [exp]
